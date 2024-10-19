@@ -35,9 +35,17 @@
 require('dotenv').config();  // Make sure this is at the top
 
 const express = require("express");
+const http = require('http');
+const socketIO = require('socket.io');
+const chatRoutes = require('./routes/chatRoutes');
+const { joinRoom, sendMessage } = require('./controllers/chatController');
+
+
 const connectDb = require('./db.js');
 
 const app = express();
+const server = http.createServer(app);
+const io = socketIO(server);
 const PORT = process.env.PORT || 3000;
 
 // Connect to MongoDB
@@ -57,6 +65,10 @@ app.use('/auth', authRoutes);
 const otpRoutes = require("./routes/otpRoute.js");
 app.use('/verify-otp', otpRoutes);
 
+
+
+
+
 // Import and use the Voting route
 const votingRoutes = require("./routes/votingRoute.js");
 app.use('/voting', votingRoutes);
@@ -72,6 +84,31 @@ app.use('/submitFormAnswers',submitFormAnswersRoutes);
 // Import and use the match route
 const matchRoutes = require("./routes/matchRoute.js");
 app.use('/match', matchRoutes);
+
+
+// Use chat routes
+app.use('/api/chat', chatRoutes);
+
+
+// Handle socket connection
+io.on('connection', (socket) => {
+  console.log('A user connected:', socket.id);
+
+  socket.on('joinRoom', ({ userId }) => {
+      joinRoom(socket, userId);
+  });
+
+  socket.on('sendMessage', ({ userId, message }) => {
+      sendMessage(io, userId, message);
+  });
+
+  socket.on('disconnect', () => {
+      console.log('User disconnected:', socket.id);
+  });
+});
+
+
+
 
 // highlights
 const highlightRoutes = require('./routes/highlightRoute')
